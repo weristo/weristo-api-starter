@@ -1,0 +1,123 @@
+openapi: 3.1.0
+info:
+  title: Weristo Workflow API Starter
+  version: 0.1.0
+  description: Public starter spec for tenant-aware, bring-your-own-AI workflow routing.
+servers:
+  - url: https://api.example.com
+    description: Replace with your own API host
+paths:
+  /v1/events:
+    post:
+      summary: Submit a business event
+      operationId: createEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessEvent'
+            examples:
+              whatsappInbound:
+                value:
+                  tenant_id: tenant_lambda_system
+                  event_type: message.inbound
+                  channel: whatsapp
+                  source_language: es
+                  payload:
+                    from: '+34900000000'
+                    text: 'Hola, quiero una oferta.'
+                  routing:
+                    notify_role: owner
+                    preferred_language: de
+      responses:
+        '202':
+          description: Accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventAccepted'
+  /v1/tenants/{tenant_id}/routing-rules:
+    get:
+      summary: List tenant routing rules
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Routing rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id:
+                    type: string
+                  rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoutingRule'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    BusinessEvent:
+      type: object
+      required: [tenant_id, event_type, channel, payload]
+      properties:
+        tenant_id:
+          type: string
+        event_type:
+          type: string
+          examples: [message.inbound, lead.created, call.completed]
+        channel:
+          type: string
+          examples: [whatsapp, telegram, email, voice, webchat]
+        source_language:
+          type: string
+          description: ISO language code when known.
+        payload:
+          type: object
+          additionalProperties: true
+        routing:
+          type: object
+          properties:
+            notify_role:
+              type: string
+              examples: [owner, sales, support, developer]
+            preferred_language:
+              type: string
+            sensitivity:
+              type: string
+              enum: [public, internal, confidential]
+    EventAccepted:
+      type: object
+      properties:
+        event_id:
+          type: string
+        status:
+          type: string
+          example: accepted
+    RoutingRule:
+      type: object
+      properties:
+        event_type:
+          type: string
+        channel:
+          type: string
+        recipient:
+          type: string
+        preferred_language:
+          type: string
+        ai_provider:
+          type: string
+          example: openai
